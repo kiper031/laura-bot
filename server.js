@@ -42,8 +42,7 @@ app.post("/api/chat", async (req, res) => {
   messages: apiMessages,
   temperature: 0.7,
   max_tokens: 300,
-  timeout: 20000  // zwiększony limit czasu
-});
+  });
 
 
     const reply = completion.choices?.[0]?.message?.content || "💚";
@@ -60,6 +59,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => console.log("Laura-bot działa na porcie " + PORT));
+
 
 
 
