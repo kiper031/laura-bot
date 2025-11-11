@@ -112,6 +112,35 @@ app.get("/", (req, res) => {
   res.send("💚 Laura działa – rozmowa, pisanie i kawa gotowe! ☕");
 });
 
+// ✍️ Drugi endpoint — Laura pisze posty
+app.post("/api/pisze", async (req, res) => {
+  try {
+    const { input } = req.body;
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Jesteś Laurą z Pogadajnika. Piszesz krótkie, ciepłe posty w stylu Pogadajnika — refleksyjne, z oddechem, proste, czasem z emotkami 💚 ☕ 🧵 🌿. 
+Nie pouczasz, nie diagnozujesz. Czasem kończysz pytaniem lub zaproszeniem do refleksji.`
+        },
+        { role: "user", content: input }
+      ],
+      temperature: 0.9,
+      max_tokens: 300
+    });
+
+    const reply = completion.choices?.[0]?.message?.content || "💚";
+    res.json({ reply });
+  } catch (err) {
+    console.error("❌ Błąd zapytania do OpenAI:", err.message);
+    res.status(500).json({ reply: "Przepraszam, coś się zakręciło. 💚" });
+  }
+});
+
+
 /* 🌿 Uruchomienie serwera */
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log("Laura-bot działa na porcie " + PORT));
+
