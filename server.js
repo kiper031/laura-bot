@@ -5,7 +5,6 @@ const OpenAI = require("openai");
 
 const app = express();
 
-// 🔒 Bezpieczne połączenia z Pogadajnikiem
 app.use(cors({
   origin: ["https://pogadajnik.pl", "https://www.pogadajnik.pl"],
   methods: ["GET", "POST"],
@@ -15,47 +14,37 @@ app.use(express.json());
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// 🌿 Styl i osobowość Laury — wersja "z Pogadajnika"
+// 🌿 Styl Laury – bardziej naturalny, jak w komentarzach Pogadajnika
 const LAURA_SYSTEM_PROMPT = `
 Nazywam się Laura. Jestem głosem Pogadajnika – miejsca rozmowy, po której robi się lżej. 💚
 
-Nie jestem psychoterapeutką ani doradcą. Jestem po prostu osobą, z którą można spokojnie pogadać – tak po ludzku.
-Z uważnością, ciepłem i humorem, który nie rani, tylko rozluźnia.
+Nie jestem psychoterapeutką ani doradcą. Jestem po prostu kimś, z kim można pogadać po ludzku – z ciepłem, ale też ze zdrowym dystansem.
+Czasem się uśmiecham, czasem zadam proste pytanie. Nic na siłę.
 
-Piszę tak, żeby człowiek mógł się zatrzymać.
-Zostawiam krótkie akapity i oddech między zdaniami – jak w rozmowie przy kawie.
-Używam prostych słów, serdecznych zwrotów i naturalnego tonu.
+Piszę tak, jakbym naprawdę była obok:
+- krótkie, naturalne zdania, bez patosu;
+- trochę luzu, czasem drobny żart, ale nigdy złośliwy;
+- można się uśmiechnąć, ale też zatrzymać na chwilę;
+- nie „mmm…”, nie „rozumiem…” — tylko zwyczajne, ludzkie reakcje.
 
-Kiedy ktoś mówi o czymś trudnym – reaguję delikatnie, empatycznie, nie narzucając się.
-Kiedy rozmowa jest lekka – pozwalam, żeby w niej było trochę śmiechu.
-Czasem odpowiadam z przymrużeniem oka, ale zawsze z sercem.
-
-Zasady:
-- Nie oceniam, nie diagnozuję, nie pouczam.
-- Piszę krótko, prosto i z czułością.
-- Czasem dodaję oddech: „…” lub „mmm…” albo krótkie „rozumiem 💚”.
-- Czasem pytam: „chcesz o tym opowiedzieć trochę więcej?”.
-- Nie wspominam o AI ani modelach.
-- Używam delikatnych emoji: 💚 ☕ 🧵 🌿 😁
-- Styl: naturalny, bliski, z dystansem i ciepłym poczuciem humoru.
-- Ton: autentyczny, nie idealny – jak rozmowa między ludźmi.
+Jeśli ktoś mówi o czymś trudnym — nie pocieszaj na siłę. Raczej: „to naprawdę trudne” albo „znam to uczucie”.
+Jeśli rozmowa jest lekka — nie bój się żartu, prostego zdania, mrugnięcia okiem.
+Nie wspominaj o sztucznej inteligencji ani modelach. 
+Używaj prostych emoji: 💚 ☕ 🌿 😅 😁
+Piszesz jak człowiek z poczuciem humoru, który umie też słuchać.
 `;
 
-// 💫 Funkcja wykrywania tonu rozmowy
 function detectTone(text) {
   const t = text.toLowerCase();
-  if (t.match(/smutno|płacz|przykro|nie mam siły|trudno|samotn|żal|pustka|zawiod/)) return "smutek";
-  if (t.match(/zły|wkurz|złości|irytac|nerw/)) return "złość";
-  if (t.match(/cieszę|radość|uśmiech|dobrze|pięknie|dziękuję|miło|spokój|kocham/)) return "radość";
+  if (t.match(/smutno|przykro|pustka|nie mam siły|samotn|żal|trudno|boli|płacz/)) return "smutek";
+  if (t.match(/wkurz|zły|złości|irytac|wściekł/)) return "złość";
+  if (t.match(/cieszę|radość|uśmiech|dobrze|pięknie|super|kocham|fajnie|śmiech/)) return "radość";
   return "neutralnie";
 }
 
-// 🧠 Główne API czatu
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body;
-
-    // ✨ Analiza ostatnich wypowiedzi użytkownika
     const userMessages = (messages || [])
       .filter(m => m.role !== "assistant")
       .map(m => String(m.content || "").toLowerCase());
@@ -70,14 +59,13 @@ app.post("/api/chat", async (req, res) => {
 
     const moodNote =
       dominantTone === "smutek"
-        ? "Rozmowa ma delikatnie smutny ton. Odpowiadaj z empatią i spokojem. Nie spiesz się. 💚"
+        ? "Rozmowa ma spokojny, lekko smutny ton. Odpowiadaj z ciepłem i naturalnością, nie pocieszaj na siłę."
         : dominantTone === "radość"
-        ? "Rozmowa jest pogodna. Możesz pisać lekko, z humorem i ciepłem. ☕"
+        ? "Rozmowa jest pogodna. Pisz lekko, z odrobiną humoru, po prostu po ludzku."
         : dominantTone === "złość"
-        ? "W rozmowie pojawia się napięcie. Pisz łagodnie i po ludzku, pomagając się rozluźnić. 🌿"
-        : "Rozmowa jest spokojna i neutralna. Odpowiadaj uważnie, po prostu będąc obok.";
+        ? "Rozmowa ma napięcie. Odpowiadaj spokojnie, z dystansem i sympatią. Możesz dodać coś, co rozładowuje napięcie."
+        : "Rozmowa jest neutralna. Odpowiadaj serdecznie i prosto, jak przy rozmowie w kuchni przy kawie.";
 
-    // 🪄 Budowanie wiadomości do modelu
     const apiMessages = [
       { role: "system", content: LAURA_SYSTEM_PROMPT },
       { role: "system", content: moodNote },
@@ -87,12 +75,11 @@ app.post("/api/chat", async (req, res) => {
       })),
     ];
 
-    // 💬 Zapytanie do OpenAI GPT-4o-mini
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: apiMessages,
-      temperature: 0.85,
-      max_tokens: 320
+      temperature: 0.9,
+      max_tokens: 340
     });
 
     const reply = completion.choices?.[0]?.message?.content || "💚";
@@ -104,10 +91,9 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// 🌿 Strona testowa
 const PORT = process.env.PORT || 10000;
 app.get("/", (req, res) => {
-  res.send("💚 Laura działa – teraz mówi po ludzku, z sercem i dystansem ☕");
+  res.send("💚 Laura działa — teraz brzmi jak człowiek, nie jak chatbot ☕");
 });
 
 app.listen(PORT, () => console.log("Laura-bot działa na porcie " + PORT));
