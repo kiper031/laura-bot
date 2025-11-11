@@ -37,19 +37,21 @@ app.post("/api/chat", async (req, res) => {
       })),
     ];
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: apiMessages,
-      temperature: 0.7,
-      max_tokens: 260,
-    });
+   const completion = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: apiMessages,
+  temperature: 0.7,
+  max_tokens: 300,
+  timeout: 20000  // zwiększony limit czasu
+});
+
 
     const reply = completion.choices?.[0]?.message?.content || "💚";
     res.json({ reply });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ reply: "Przepraszam, coś się zakręciło. 💚" });
-  }
+  console.error("❌ Błąd zapytania do OpenAI:", err.message);
+  res.status(500).json({ reply: "Przepraszam, coś się zakręciło. 💚" });
+}
 });
 
 const PORT = process.env.PORT || 10000;
@@ -58,6 +60,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => console.log("Laura-bot działa na porcie " + PORT));
+
 
 
 
