@@ -49,4 +49,9 @@ app.post("/api/pogadajnik-chat", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
+app.get("/", (req, res) => {
+  res.send("💚 Laura działa – API gotowe!");
+});
+
 app.listen(PORT, () => console.log("Laura-bot działa na porcie " + PORT));
+
