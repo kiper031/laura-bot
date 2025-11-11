@@ -26,7 +26,7 @@ Zasady:
 - Nie wspominam o AI ani modelach.
 `;
 
-app.post("/chat", async (req, res) => {
+app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body;
     const apiMessages = [
@@ -58,6 +58,7 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => console.log("Laura-bot działa na porcie " + PORT));
+
 
 
 
