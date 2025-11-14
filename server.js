@@ -172,7 +172,7 @@ app.post("/api/chat", async (req, res) => {
         { role: "system", content: LAURA_CHAT_PROMPT },
         ...trimmed
       ],
-      temperature: 0.88, // mikro-humor, ciepło
+      temperature: 1, // mikro-humor, ciepło
       max_completion_tokens: 350
     });
 
@@ -196,7 +196,7 @@ app.post("/api/pisze", async (req, res) => {
         { role: "system", content: LAURA_WRITER_PROMPT },
         { role: "user", content: input }
       ],
-      temperature: 1.0,
+      temperature: 1,
       max_completion_tokens: 500
     });
 
@@ -217,3 +217,4 @@ app.get("/", (req, res) => {
 /* 🌿 Start serwera */
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log("Laura-bot 3.0+ działa na porcie " + PORT));
+
