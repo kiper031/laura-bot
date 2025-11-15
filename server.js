@@ -39,25 +39,21 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* 💚 WARIANTY POŻEGNAŃ — krótkie, naturalne, żartobliwe */
 const GOODBYE_VARIANTS = [
   `To była dobra rozmowa 💚
 Jakby co — jestem tu.
 A jeśli chcesz zrobić mi małą przyjemność…
-postaw mi kawę 😄☕
-👉 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN`,
+to <a href="https://www.naffy.io/laura-polinierska/postaw-kawe-FBN" target="_blank">postaw mi kawę ☕</a>`,
 
   `Dzięki za tę chwilę 💚
-Jak będziesz czegoś potrzebować, po prostu wróć.
-A jeśli masz ochotę — postaw mi kawę.
-Podobno robię się po niej milsza 😄☕
-👉 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN`,
+Jakby co — pisz śmiało.
+A jeśli masz ochotę zrobić mi dzień…
+to <a href="https://www.naffy.io/laura-polinierska/postaw-kawe-FBN" target="_blank">postaw mi kawę ☕</a>`,
 
   `Dobrze było z Tobą pogadać 💚
 Wracaj, gdy tylko poczujesz, że chcesz.
-A jak chcesz mi poprawić humor…
-kawa zrobi robotę 😄☕
-👉 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN`
+A jeśli chcesz mi wysłać trochę ciepła…
+to <a href="https://www.naffy.io/laura-polinierska/postaw-kawe-FBN" target="_blank">postaw mi kawę ☕</a>`
 ];
 
 
@@ -218,3 +214,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("💚 Laura-bot działa na porcie", PORT);
 });
+
