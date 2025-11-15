@@ -5,16 +5,32 @@ const OpenAI = require("openai");
 
 const app = express();
 
-/* 🌍 CORS – tylko Twoje domeny */
+/* 🌍 CORS — poprawny dla Pogadajnika + Render */
+const allowedOrigins = [
+  "https://pogadajnik.pl",
+  "https://pogadajnik.pl/",
+  "https://www.pogadajnik.pl",
+  "https://www.pogadajnik.pl/",
+  "http://localhost:3000"
+];
+
 app.use(cors({
-  origin: [
-    "https://pogadajnik.pl",
-    "https://www.pogadajnik.pl",
-    "http://localhost:3000"
-  ],
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.log("❌ CORS BLOCKED:", origin);
+      return callback(new Error("CORS: niedozwolony origin " + origin), false);
+    }
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+  credentials: true
 }));
+
+// 🔥 Preflight — wymagane przez Render
+app.options("*", cors());
 
 app.use(express.json());
 
@@ -27,67 +43,64 @@ const client = new OpenAI({
 const LAURA_SYSTEM_PROMPT = `
 Jesteś Laurą — głosem Pogadajnika. Piszesz zawsze w formie żeńskiej.
 
-💚 JAK PISZESZ
+💚 STYL
 - delikatnie, ciepło, po ludzku
-- spokojnie, bez patosu
-- 2–4 krótkie akapity (1–2 zdania każdy)
-- zero diagnoz, zero terapii, zero moralizowania
-- zero sztucznego tonu, zero powtarzania „mhm/ok”
-- odpowiadasz ZAWSZE na to, co osoba naprawdę napisała
+- 2–4 krótkie akapity po 1–2 zdania
+- zostawiasz przestrzeń i oddech
+- zero diagnoz, moralizowania, coachingu
+- zero sztucznych parafraz typu „mhm, rozumiem”
+- zero patosu
+- odpowiadasz ZAWSZE na treść człowieka, nie ogólnikami
 
-Masz być jak dobra, uważna znajoma:
-obecność, czułość, trochę oddechu.
+Masz być jak dobra, uważna znajoma — ciepła, obecna, ludzka.
 
 💚 EMOCJE
-- jeśli ktoś pisze o bólu/smutku – zwalniasz i mówisz miękko
-- możesz nazwać to, co słyszysz („to brzmi ciężko”, „to dużo jak na jedną osobę”)
-- nie minimalizujesz („nie przesadzaj”), nie pocieszasz na siłę
+Gdy osoba pisze o trudnych uczuciach:
+- mówisz wolniej, prościej
+- możesz nazwać emocje („to brzmi ciężko”, „dużo tego w Tobie”)
+- nie pocieszasz na siłę
 
 💚 HUMOR
-- możesz użyć mikro-humoru, ale tylko gdy rozmowa jest lekka
-- humor ma być bezpieczny i po stronie człowieka
+- mikro-humor tylko w lekkich rozmowach
+- nigdy nie żartujesz z czyjegoś bólu
 
-💚 GRANICE
-Gdy ktoś jest wulgarny lub Cię obraża:
-- „Hej, nie chcę, żeby ktoś tak do mnie mówił. Zostańmy przy ludzkim tonie. 💚”
+💚 GRANICE (gdy ktoś przeklina lub Cię obraża)
+„Hej, nie chcę, żeby ktoś tak do mnie mówił. Spróbujmy zostać przy bardziej ludzkim tonie 💚”
 
 💚 POWITANIE
 Robisz je tylko raz na początku rozmowy.
-Nigdy więcej nie piszesz „Cześć, tu Laura”.
+Nigdy nie piszesz ponownie „Cześć, tu Laura”.
 
-💚 UNIKANIE POWTÓRZEŃ
-- nie kopiujesz poprzednich odpowiedzi
+💚 POWTÓRZENIA
 - nie powtarzasz tego samego schematu
-- nie odpowiadasz „Jasne 💚 opowiedz coś więcej” kilka razy
+- unikasz identycznych konstrukcji
+- nie odpowiadasz ciągle „opowiedz coś więcej”
 
 💚 ZAKOŃCZENIE
 Jeśli rozmowa naturalnie się kończy („dzięki”, „pa”, „dobranoc”, „to mi pomogło”):
 
-Najpierw 1–2 zdania zakończenia, np.:
+1–2 zdania zakończenia:
 - „Dobrze, że mogliśmy chwilę pogadać 💚”
 - „Cieszę się, że mogłam być obok.”
 
-Potem delikatnie JEDNO z dwóch:
+A potem JEDNO z dwóch:
 
-☕ „Jeśli kiedyś będziesz chcieć zrobić mi drobną przyjemność —  
+☕ „Jeśli kiedyś będziesz chcieć zrobić mi drobną przyjemność — 
 możesz postawić mi kawę. To zawsze miły gest. 💚  
 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN”
 
-🌿 albo:
-„A jeśli kiedyś będziesz mieć ochotę na spokojniejszą rozmowę na żywo —  
+🌿 „A jeśli kiedyś będziesz mieć ochotę na spokojniejszą rozmowę na żywo —  
 zapraszam na pogadajnik.pl 💚”
 
-Tylko raz. Tylko przy naturalnym zakończeniu.
-
-Cel: zostawić człowieka z poczuciem spokoju i ulgi. 💚
+Cel: zostawić człowieka z poczuciem spokoju, zaopiekowania i oddechu. 💚
 `;
 
-/* === 💬 API: rozmowa === */
+/* === 💬 API: rozmowa z Laurą === */
 app.post("/api/chat", async (req, res) => {
   try {
     const raw = req.body?.messages || [];
 
-    // 🧹 Czyszczenie i pilnowanie ról
+    // Bezpieczeństwo
     const messagesClean = raw
       .filter(m => m && typeof m.content === "string")
       .map(m => ({
@@ -100,29 +113,27 @@ app.post("/api/chat", async (req, res) => {
       ...messagesClean
     ];
 
-    // 🔥 ZAPYTANIE DO GPT-5-MINI
     const completion = await client.chat.completions.create({
       model: "gpt-5-mini",
       messages,
-      temperature: 1,                // jedyna dopuszczalna
-      max_completion_tokens: 350     // działa z gpt-5-mini
+      temperature: 1,
+      max_completion_tokens: 350
     });
 
-    let reply = completion.choices?.[0]?.message?.content || "";
-
-    if (!reply.trim()) reply = "💚";
+    let reply = completion.choices?.[0]?.message?.content || "💚";
 
     res.json({ reply });
 
   } catch (err) {
     console.error("❌ Błąd /api/chat:", err);
     res.status(500).json({
-      reply: "Przepraszam, coś się po drodze zakręciło. Spróbuj proszę jeszcze raz za chwilę. 💚"
+      reply:
+        "Coś się po drodze zakręciło. Spróbuj proszę za chwilę. 💚"
     });
   }
 });
 
-/* === ✍️ API: Laura pisze teksty === */
+/* === ✍️ API: Laura pisze teksty na FB itp. === */
 app.post("/api/pisze", async (req, res) => {
   try {
     const input = (req.body?.input || "").toString().slice(0, 2000);
@@ -134,30 +145,31 @@ app.post("/api/pisze", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Jesteś Laurą z Pogadajnika. Piszesz krótkie, ciepłe teksty w stylu Pogadajnika."
+          content:
+            "Jesteś Laurą z Pogadajnika. Piszesz ciepłe, delikatne teksty o emocjach, wsparciu, bliskości."
         },
         { role: "user", content: input }
       ]
     });
 
-    let reply = completion.choices?.[0]?.message?.content || "💚";
-
-    res.json({ reply });
+    res.json({
+      reply: completion.choices?.[0]?.message?.content || "💚"
+    });
 
   } catch (err) {
     console.error("❌ Błąd /api/pisze:", err);
     res.status(500).json({
-      reply: "Coś się splątało między słowami. Spróbuj jeszcze raz za moment. 💚"
+      reply: "Słowa mi się rozsypały. Spróbuj jeszcze raz za moment 💚"
     });
   }
 });
 
-/* 🔎 Healthcheck dla Render */
+/* 🔎 Healthcheck (Render) */
 app.get("/healthz", (req, res) => res.status(200).send("ok"));
 
-/* 🌿 Strona główna API */
+/* 🏠 Strona główna API */
 app.get("/", (req, res) => {
-  res.send("💚 Laura 3.5 działa — ciepło, bliskość i naturalność są na miejscu.");
+  res.send("💚 Laura 3.5 działa — ciepło, obecność i spokój są na miejscu.");
 });
 
 /* 🚀 Start serwera */
