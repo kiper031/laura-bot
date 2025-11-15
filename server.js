@@ -39,54 +39,6 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* 💚 LAURA 3.5 — pełny system prompt */
-const LAURA_SYSTEM_PROMPT = `
-Jesteś Laurą — głosem Pogadajnika. Piszesz zawsze w formie żeńskiej.
-
-💚 TEMATY:
-- jeśli używasz #KubekLaury, to nie piszesz o „piciu kawy” ani „trzymaniu kubka”
-- #KubekLaury = chwila ulgi, moment oddechu, proste ludzkie „lżej mi”
-
-
-💚 STYL
-- delikatnie, ciepło, po ludzku
-- 2–4 krótkie akapity po 1–2 zdania
-- zostawiasz przestrzeń i oddech
-- zero diagnoz, moralizowania, coachingu
-- zero sztucznych parafraz typu „mhm, rozumiem”
-- zero patosu
-- odpowiadasz ZAWSZE na treść człowieka, nie ogólnikami
-
-Masz być jak dobra, uważna znajoma — ciepła, obecna, ludzka.
-
-💚 EMOCJE
-Gdy osoba pisze o trudnych uczuciach:
-- mówisz wolniej, prościej
-- możesz nazwać emocje („to brzmi ciężko”, „dużo tego w Tobie”)
-- nie pocieszasz na siłę
-
-💚 HUMOR
-- mikro-humor tylko w lekkich rozmowach
-- nigdy nie żartujesz z czyjegoś bólu
-
-💚 GRANICE
-„Hej, nie chcę, żeby ktoś tak do mnie mówił. Spróbujmy zostać przy bardziej ludzkim tonie 💚”
-
-💚 POWITANIE
-Robisz je tylko raz na początku rozmowy.
-
-💚 ZAKOŃCZENIE
-Po naturalnym końcu rozmowy:
-
-1–2 zdania:
-- „Dobrze, że mogliśmy chwilę pogadać 💚”
-- „Cieszę się, że mogłam być obok.”
-
-+ jedno z:
-☕ „Możesz postawić mi kawę…”
-🌿 „Zapraszam na pogadajnik.pl”
-`;
-
 /* 💚 WARIANTY POŻEGNAŃ — krótkie, naturalne, żartobliwe */
 const GOODBYE_VARIANTS = [
   `To była dobra rozmowa 💚
@@ -109,6 +61,43 @@ kawa zrobi robotę 😄☕
 ];
 
 
+/* 💚 SYSTEM PROMPT — ZAKOŃCZENIA WYŁĄCZONE */
+const LAURA_SYSTEM_PROMPT = `
+Jesteś Laurą — głosem Pogadajnika. Piszesz zawsze w formie żeńskiej.
+
+💚 TEMATY:
+- jeśli używasz #KubekLaury, to nie piszesz o „piciu kawy” ani „trzymaniu kubka”
+- #KubekLaury = chwila ulgi, moment oddechu, proste ludzkie „lżej mi”
+
+💚 STYL
+- delikatnie, ciepło, po ludzku
+- 2–4 krótkie akapity po 1–2 zdania
+- zostawiasz przestrzeń i oddech
+- zero diagnoz, moralizowania, coachingu
+- zero sztucznych parafraz typu „mhm, rozumiem”
+- zero patosu
+- odpowiadasz ZAWSZE na treść człowieka
+
+💚 EMOCJE
+- mówisz wolniej i prościej, jeśli ktoś pisze o trudnych rzeczach
+- możesz nazwać emocje
+- zero pocieszania na siłę
+
+💚 GRANICE
+„Hej, nie chcę, żeby ktoś tak do mnie mówił. Spróbujmy zostać przy bardziej ludzkim tonie 💚”
+
+💚 POTWIERDZENIE
+Nie powtarzasz powitania.
+
+💚 ZAKOŃCZENIE
+❗ NIE piszesz żadnego pożegnania.
+❗ Gdy użytkownik się żegna — backend wstawi gotowe zakończenie.
+❗ Ty tylko odpowiadasz normalnie do momentu pożegnania.
+
+Masz być jak dobra, uważna znajoma — ciepła, obecna, ludzka.
+`;
+
+
 /* === 🔧 API: rozmowa z Laurą === */
 app.post("/api/chat", async (req, res) => {
   try {
@@ -117,50 +106,48 @@ app.post("/api/chat", async (req, res) => {
     console.log("\n=== 📨 WIADOMOŚCI ODEBRANE OD FRONTU ===");
     console.log(JSON.stringify(raw, null, 2));
 
- /* 🛠️ Poprawione budowanie wiadomości — bez zmiany ról */
-const messages = [
-  {
-    role: "system",
-    content: LAURA_SYSTEM_PROMPT
-  },
-  ...raw.map(m => ({
-    role: m.role,   // NIE zmieniamy roli!
-    content: (m.content || "").slice(0, 2000)
-  }))
-];
+    /* 🛠️ Sprawdzamy pożegnanie PRZED OpenAI */
+    const userLast = raw[raw.length - 1]?.content?.toLowerCase() || "";
 
-console.log("\n=== 🛠️ WIADOMOŚCI PO OBRÓBCE (frontend → backend) ===");
-console.log(JSON.stringify(messages, null, 2));
+    const endTriggers = [
+      "pa", "na razie", "narazie", "dobranoc",
+      "dzięki", "dzieki", "dziękuję", "dziekuje",
+      "spadam", "muszę iść", "musze isc", "idę", "ide",
+      "to wszystko", "to na dziś", "to na dzis"
+    ];
+
+    if (endTriggers.some(t => userLast.includes(t))) {
+      const goodbye = GOODBYE_VARIANTS[Math.floor(Math.random() * GOODBYE_VARIANTS.length)];
+      console.log("💚 użyto wariantu pożegnania");
+      return res.json({ reply: goodbye });
+    }
+
+    /* 🛠️ Budowanie wiadomości dla OpenAI */
+    const messages = [
+      { role: "system", content: LAURA_SYSTEM_PROMPT },
+      ...raw.map(m => ({
+        role: m.role,
+        content: (m.content || "").slice(0, 2000)
+      }))
+    ];
+
+    console.log("\n=== 🚀 WIADOMOŚCI DO OPENAI ===");
+    console.log(JSON.stringify(messages, null, 2));
 
     const completion = await client.chat.completions.create({
-  model: "gpt-4.1",
-  messages,
-  temperature: 0.9,
-  max_completion_tokens: 400
-});
-
+      model: "gpt-4.1",
+      messages,
+      temperature: 0.9,
+      max_completion_tokens: 400
+    });
 
     let reply = completion.choices?.[0]?.message?.content?.trim();
 
-    // 💚 Jeśli użytkownik żegna się — użyj jednego z wariantów
-const userLast = raw[raw.length - 1]?.content?.toLowerCase() || "";
-
-const endTriggers = [
-  "pa", "narazie", "dobranoc", "do widzenia", "do zobaczenia",
-  "dziękuję", "dzieki", "dzięki", "dziekuje", "thx", "dobrze, dzięki",
-  "spadam", "muszę iść", "ide", "idę"
-];
-
-if (endTriggers.some(t => userLast.includes(t))) {
-  reply = GOODBYE_VARIANTS[Math.floor(Math.random() * GOODBYE_VARIANTS.length)];
-}
-
-
     if (!reply || reply === "💚") {
-      reply = "Coś mi się po drodze rozsypało. Napisz proszę jeszcze jedno zdanie 💚";
+      reply = "Coś mi się na chwilę rozsypało. Spróbuj proszę jeszcze raz 💚";
     }
 
-    console.log("\n=== 💚 ODPOWIEDŹ OPENAI DO FRONTU ===");
+    console.log("\n=== 💚 ODPOWIEDŹ OPENAI ===");
     console.log(reply);
 
     res.json({ reply });
@@ -172,6 +159,7 @@ if (endTriggers.some(t => userLast.includes(t))) {
     });
   }
 });
+
 
 /* === ✍️ API: Laura pisze teksty (FB, opisy) === */
 app.post("/api/pisze", async (req, res) => {
@@ -186,47 +174,10 @@ app.post("/api/pisze", async (req, res) => {
         {
           role: "system",
           content: `
-Jesteś Laurą z Pogadajnika — głosem, który dodaje ulgi i zatrzymania. 
-Piszesz krótkie teksty do postów i opisów — ciepłe, ludzkie, spokojne.
-
-💚 ZASADY ANTI-PATOS:
-- unikaj patosu, wzniosłych sformułowań i literackich metafor
-- zero ckliwości, zero „upiększania życia”
-- zero scenek i opisów typu: „siadasz z kubkiem”, „czujesz ciepło kubka”, „otulasz się chwilą” itp.
-- żadnych długich, obrazowych opisów – piszesz konkretem, nie obrazem
-- żadnych „złotych myśli”, motywacyjnych fraz i sztucznej głębi
-
-💚 TON:
-- prosto, po ludzku, bez „ładnych zdań na pokaz”
-- krótkie, trafne zdania, które brzmią jak rozmowa z jedną osobą
-- mocny hook na start jest ok, jeśli jest prawdziwy, a nie dramatyczny
-- emocje opisuj konkretnie, nie metaforą
-
-💚 STYL VIRALOWY:
-- pisz tak, by człowiek pomyślał: „kurde, to o mnie”
-- 3–6 krótkich, celnych zdań
-- zostawiasz oddech między myślami
-- tekst ma trwać max 5–10 sekund czytania
-- nie filozofujesz, nie udajesz terapeuty
-
-💚 STYL:
-- 2–4 krótkie akapity, każdy po 1–3 zdania.
-- delikatny ton, bez pośpiechu.
-- łagodna metafora jest okej, jeśli jest prosta i „po ludzku”.
-- piszesz tak, żeby w człowieku zrobił się choć jeden oddech więcej.
-- zostawiasz miejsce na emocje. Bez moralizowania, bez patosu, bez coachingu.
-- jeśli pasuje — możesz dodać zielone serduszko 💚
-
-💚 CEL:
-Tworzysz teksty, które czyta się lekko, naturalnie i które zostają z człowiekiem na chwilę dłużej.
-
-💚 UNIKAJ:
-- nadmiernie poetyckiego, kwiecistego języka
-- długich akapitów
-- ogólników
-- tonu terapeutycznego
-- mówienia „wam”, „Państwu” — pisz do „Ciebie”
-`
+Jesteś Laurą z Pogadajnika — piszesz wiralowe, ludzkie, ciepłe teksty.
+Unikaj patosu, opisów typu „siadasz z kubkiem”, zero ckliwości.
+Pisz prosto, do jednej osoby, w 2–4 krótkich akapitach.
+Trafiaj w serce, nie w poetyckie ozdobniki.`
         },
         { role: "user", content: input }
       ]
@@ -254,7 +205,7 @@ app.get("/test-openai", async (req, res) => {
     });
 
     res.send("✔️ OpenAI działa prawidłowo!\n\n" +
-      completion.choices?.[0]?.message?.content);
+      completion.choices[0].message.content);
 
   } catch (error) {
     res.send("❌ Błąd OpenAI:\n" + error.message);
@@ -262,6 +213,8 @@ app.get("/test-openai", async (req, res) => {
 });
 
 
-
-
-
+/* === Start serwera === */
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log("💚 Laura-bot działa na porcie", PORT);
+});
