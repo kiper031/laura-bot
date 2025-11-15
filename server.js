@@ -90,22 +90,21 @@ app.post("/api/chat", async (req, res) => {
     console.log("\n=== 📨 WIADOMOŚCI ODEBRANE OD FRONTU ===");
     console.log(JSON.stringify(raw, null, 2));
 
-    /* 🛠️ poprawione filtrowanie — niczego nie gubi */
-    const messagesClean = raw.map(m => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: (m.content || "").slice(0, 2000)
-    }));
+ /* 🛠️ Poprawione budowanie wiadomości — bez zmiany ról */
+const messages = [
+  {
+    role: "system",
+    content: LAURA_SYSTEM_PROMPT
+  },
+  ...raw.map(m => ({
+    role: m.role,   // NIE zmieniamy roli!
+    content: (m.content || "").slice(0, 2000)
+  }))
+];
 
-    console.log("\n=== 🛠️ PO OBRÓBCE (frontend → backend) ===");
-    console.log(JSON.stringify(messagesClean, null, 2));
+console.log("\n=== 🛠️ WIADOMOŚCI PO OBRÓBCE (frontend → backend) ===");
+console.log(JSON.stringify(messages, null, 2));
 
-    const messages = [
-      { role: "system", content: LAURA_SYSTEM_PROMPT },
-      ...messagesClean
-    ];
-
-    console.log("\n=== 🚀 WIADOMOŚCI WYSYŁANE DO OPENAI ===");
-    console.log(JSON.stringify(messages, null, 2));
 
     const completion = await client.chat.completions.create({
       model: "gpt-5-mini",
@@ -192,3 +191,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("💚 Laura-bot 3.5 działa na porcie", PORT);
 });
+
