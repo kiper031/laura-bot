@@ -105,13 +105,13 @@ const messages = [
 console.log("\n=== 🛠️ WIADOMOŚCI PO OBRÓBCE (frontend → backend) ===");
 console.log(JSON.stringify(messages, null, 2));
 
-
     const completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
-      messages,
-      temperature: 1,
-      max_completion_tokens: 350
-    });
+  model: "gpt-4.1",
+  messages,
+  temperature: 0.9,
+  max_completion_tokens: 400
+});
+
 
     let reply = completion.choices?.[0]?.message?.content?.trim();
 
@@ -191,4 +191,5 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("💚 Laura-bot 3.5 działa na porcie", PORT);
 });
+
 
