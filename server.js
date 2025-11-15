@@ -164,6 +164,31 @@ app.post("/api/pisze", async (req, res) => {
   }
 });
 
+/* === 🔧 TEST OPENAI — sprawdzamy czy działa klucz i połączenie === */
+app.get("/test-openai", async (req, res) => {
+  try {
+    const completion = await client.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [
+        { role: "user", content: "Sprawdź połączenie" }
+      ]
+    });
+
+    res.send(
+      "✔️ OpenAI działa prawidłowo!\n\n" +
+      "Odpowiedź modelu:\n" +
+      completion.choices[0].message.content
+    );
+
+  } catch (error) {
+    res.send(
+      "❌ Błąd w połączeniu z OpenAI:\n\n" +
+      error.message
+    );
+  }
+});
+
+
 /* 🔎 Healthcheck (Render) */
 app.get("/healthz", (req, res) => res.status(200).send("ok"));
 
@@ -177,3 +202,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("💚 Laura-bot 3.5 działa na porcie", PORT);
 });
+
