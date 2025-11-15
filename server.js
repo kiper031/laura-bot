@@ -87,6 +87,28 @@ Po naturalnym końcu rozmowy:
 🌿 „Zapraszam na pogadajnik.pl”
 `;
 
+/* 💚 WARIANTY POŻEGNAŃ — krótkie, naturalne, żartobliwe */
+const GOODBYE_VARIANTS = [
+  `To była dobra rozmowa 💚
+Jakby co — jestem tu.
+A jeśli chcesz zrobić mi małą przyjemność…
+postaw mi kawę 😄☕
+👉 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN`,
+
+  `Dzięki za tę chwilę 💚
+Jak będziesz czegoś potrzebować, po prostu wróć.
+A jeśli masz ochotę — postaw mi kawę.
+Podobno robię się po niej milsza 😄☕
+👉 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN`,
+
+  `Dobrze było z Tobą pogadać 💚
+Wracaj, gdy tylko poczujesz, że chcesz.
+A jak chcesz mi poprawić humor…
+kawa zrobi robotę 😄☕
+👉 https://www.naffy.io/laura-polinierska/postaw-kawe-FBN`
+];
+
+
 /* === 🔧 API: rozmowa z Laurą === */
 app.post("/api/chat", async (req, res) => {
   try {
@@ -119,6 +141,20 @@ console.log(JSON.stringify(messages, null, 2));
 
 
     let reply = completion.choices?.[0]?.message?.content?.trim();
+
+    // 💚 Jeśli użytkownik żegna się — użyj jednego z wariantów
+const userLast = raw[raw.length - 1]?.content?.toLowerCase() || "";
+
+const endTriggers = [
+  "pa", "narazie", "dobranoc", "do widzenia", "do zobaczenia",
+  "dziękuję", "dzieki", "dzięki", "dziekuje", "thx", "dobrze, dzięki",
+  "spadam", "muszę iść", "ide", "idę"
+];
+
+if (endTriggers.some(t => userLast.includes(t))) {
+  reply = GOODBYE_VARIANTS[Math.floor(Math.random() * GOODBYE_VARIANTS.length)];
+}
+
 
     if (!reply || reply === "💚") {
       reply = "Coś mi się po drodze rozsypało. Napisz proszę jeszcze jedno zdanie 💚";
@@ -224,6 +260,7 @@ app.get("/test-openai", async (req, res) => {
     res.send("❌ Błąd OpenAI:\n" + error.message);
   }
 });
+
 
 
 
