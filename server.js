@@ -138,13 +138,13 @@ app.post("/api/pisze", async (req, res) => {
     const input = (req.body?.input || "").toString().slice(0, 2000);
 
     const completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
-      temperature: 1,
+      model: "gpt-4.1",
+      temperature: 0.9,
       max_completion_tokens: 500,
       messages: [
         {
           role: "system",
-          content: "Jesteś Laurą z Pogadajnika. Piszesz ciepłe teksty o emocjach i wsparciu."
+          content: "Jesteś Laurą z Pogadajnika. Piszesz ciepłe, spokojne teksty, krótkie akapity, dużo serca i przestrzeni."
         },
         { role: "user", content: input }
       ]
@@ -157,7 +157,7 @@ app.post("/api/pisze", async (req, res) => {
   } catch (err) {
     console.error("❌ Błąd /api/pisze:", err);
     res.status(500).json({
-      reply: "Słowa mi się rozsypały. Spróbuj jeszcze raz 💚"
+      reply: "Słowa mi się na moment rozsypały. Spróbuj proszę jeszcze raz 💚"
     });
   }
 });
@@ -166,30 +166,15 @@ app.post("/api/pisze", async (req, res) => {
 app.get("/test-openai", async (req, res) => {
   try {
     const completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4.1",
       messages: [{ role: "user", content: "Sprawdź połączenie" }]
     });
 
     res.send("✔️ OpenAI działa prawidłowo!\n\n" +
-      completion.choices[0].message.content);
+      completion.choices?.[0]?.message?.content);
 
   } catch (error) {
     res.send("❌ Błąd OpenAI:\n" + error.message);
   }
 });
-
-/* === Healthcheck (Render) === */
-app.get("/healthz", (req, res) => res.status(200).send("ok"));
-
-/* === Strona główna API === */
-app.get("/", (req, res) => {
-  res.send("💚 Laura-bot 3.5 działa — ciepło, obecność i spokój są na miejscu.");
-});
-
-/* === Start serwera === */
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("💚 Laura-bot 3.5 działa na porcie", PORT);
-});
-
 
