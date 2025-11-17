@@ -39,23 +39,28 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+/* 💚 ZAKOŃCZENIA — NOWA ROZSZERZONA WERSJA */
 const GOODBYE_VARIANTS = [
   `To była dobra rozmowa 💚
 Jakby co — jestem tu.
-A jeśli chcesz zrobić mi małą przyjemność…
+A jeśli potrzebujesz kiedyś porozmawiać z prawdziwą Laurą, na żywo online lub telefonicznie — możesz umówić rozmowę tutaj:
+<a href="https://pogadajnik.pl" target="_blank">pogadajnik.pl</a>
+A jeśli masz ochotę zrobić mi małą przyjemność…
 to <a href="https://www.naffy.io/laura-polinierska/postaw-kawe-FBN" target="_blank">postaw mi kawę ☕</a>`,
 
   `Dzięki za tę chwilę 💚
-Jakby co — pisz śmiało.
+Wracaj zawsze, kiedy poczujesz potrzebę.
+Gdybyś chciał/chciała pogadać z prawdziwą Laurą — człowiekiem, nie botem — możesz umówić spokojną rozmowę online lub telefoniczną:
+<a href="https://pogadajnik.pl" target="_blank">pogadajnik.pl</a>
 A jeśli masz ochotę zrobić mi dzień…
 to <a href="https://www.naffy.io/laura-polinierska/postaw-kawe-FBN" target="_blank">postaw mi kawę ☕</a>`,
 
   `Dobrze było z Tobą pogadać 💚
-Wracaj, gdy tylko poczujesz, że chcesz.
+Jeśli kiedyś zechcesz porozmawiać „na żywo”, z prawdziwą Laurą — wystarczy zajrzeć tutaj:
+<a href="https://pogadajnik.pl" target="_blank">pogadajnik.pl</a>
 A jeśli chcesz mi wysłać trochę ciepła…
 to <a href="https://www.naffy.io/laura-polinierska/postaw-kawe-FBN" target="_blank">postaw mi kawę ☕</a>`
 ];
-
 
 /* 💚 SYSTEM PROMPT — ZAKOŃCZENIA WYŁĄCZONE */
 const LAURA_SYSTEM_PROMPT = `
@@ -214,4 +219,3 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("💚 Laura-bot działa na porcie", PORT);
 });
-
